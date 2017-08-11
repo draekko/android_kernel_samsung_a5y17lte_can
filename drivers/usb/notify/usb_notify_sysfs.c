@@ -353,37 +353,11 @@ static ssize_t hw_param_show(struct device *dev,
 	return ret;
 }
 
-static ssize_t hw_param_store(
-		struct device *dev, struct device_attribute *attr,
-		const char *buf, size_t size)
-{
-	struct usb_notify_dev *udev = (struct usb_notify_dev *)
-		dev_get_drvdata(dev);
-	struct otg_notify *n = udev->o_notify;
-
-	int index = 0;
-	size_t ret = -ENOMEM;
-	char *str = (char *)buf;
-
-	if (size > 2) {
-		pr_err("%s size(%zu) is too long.\n", __func__, size);
-		goto error;
-	}
-	ret = size;
-	pr_info("%s : %s\n", __func__, str);
-	if(!strncmp(str, "c", 1))
-		for (index = 0; index < USB_CCIC_HW_PARAM_MAX; index++) {
-			n->hw_param[index] = 0;
-		}
-error:
-	return ret;
-}
-
 static DEVICE_ATTR(disable, 0664, disable_show, disable_store);
 static DEVICE_ATTR(support, 0444, support_show, NULL);
 static DEVICE_ATTR(otg_speed, 0444, otg_speed_show, NULL);
 static DEVICE_ATTR(usb_hw_param, 0664, usb_hw_param_show, usb_hw_param_store);
-static DEVICE_ATTR(hw_param, 0664, hw_param_show, hw_param_store);
+static DEVICE_ATTR(hw_param, 0444, hw_param_show, NULL);
 
 static struct attribute *usb_notify_attrs[] = {
 	&dev_attr_disable.attr,

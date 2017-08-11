@@ -146,9 +146,9 @@ void dw_mci_reg_dump(struct dw_mci *host)
 			host->sfr_dump->cmd_status = host->cmd_status);
 	dev_err(host->dev, ": data_status:     0x%08x\n",
 			host->sfr_dump->force_clk_stop = host->data_status);
-	dev_err(host->dev, ": pending_events:  0x%08lx\n",
+	dev_err(host->dev, ": pending_events:  0x%08x\n",
 			host->sfr_dump->pending_events = host->pending_events);
-	dev_err(host->dev, ": completed_events:0x%08lx\n",
+	dev_err(host->dev, ": completed_events:0x%08x\n",
 			host->sfr_dump->completed_events  = host->completed_events);
 	dev_err(host->dev, ": state:           %d\n",
 			host->sfr_dump->host_state = host->state);
@@ -413,7 +413,7 @@ static void dw_mci_exynos_config_hs400(struct dw_mci *host, u32 timing)
 static void dw_mci_exynos_adjust_clock(struct dw_mci *host, unsigned int wanted)
 {
 	struct dw_mci_exynos_priv_data *priv = host->priv;
-	u32 actual;
+	unsigned long actual;
 	u8 div;
 	int ret;
 	/*

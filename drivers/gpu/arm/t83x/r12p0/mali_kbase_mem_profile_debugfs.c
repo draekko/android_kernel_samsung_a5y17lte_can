@@ -37,22 +37,9 @@ static int kbasep_mem_profile_seq_show(struct seq_file *sfile, void *data)
 	/* MALI_SEC_INTEGRATION - Destroyed context */
 	mutex_lock(&kbdev->kctx_list_lock);
 	{
-		if (kctx == NULL) {
+		if ((kctx == NULL) || (kctx->destroying_context)) {
 			mutex_unlock(&kbdev->kctx_list_lock);
 			return 0;
-		}
-		else {
-			if(kbdev->vendor_callbacks->mem_profile_check_kctx) {
-				if (!kbdev->vendor_callbacks->mem_profile_check_kctx(kctx)) {
-					mutex_unlock(&kbdev->kctx_list_lock);
-					return 0;
-				}
-			}
-
-			if(kctx->destroying_context == true) {
-				mutex_unlock(&kbdev->kctx_list_lock);
-				return 0;
-			}
 		}
 		atomic_inc(&kctx->mem_profile_showing_state);
 	}

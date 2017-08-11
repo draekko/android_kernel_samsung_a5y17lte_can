@@ -158,19 +158,19 @@ static irqreturn_t s2mu004_irq_thread(int irq, void *data)
 	int i, ret;
 
 	u8 temp_vdadc;
-	u8 chg_status;
 	pr_debug("%s: irq gpio pre-state(0x%02x)\n", __func__,
 				gpio_get_value(s2mu004->irq_gpio));
+
 
 	/* CHG_INT1 ~ INT2 */
 	ret = s2mu004_read_reg(s2mu004->i2c, S2MU004_REG_SC_INT1,
 				&irq_reg[CHG_INT1]);
-	pr_info("%s: charger interrupt1(0x%02x)\n",
+	pr_info("%s: charger interrupt(0x%02x)\n",
 			__func__, irq_reg[CHG_INT1]);
 
 	ret = s2mu004_read_reg(s2mu004->i2c, S2MU004_REG_SC_INT2,
 				&irq_reg[CHG_INT2]);
-	pr_info("%s: charger interrupt2(0x%02x)\n",
+	pr_info("%s: charger interrupt(0x%02x)\n",
 			__func__, irq_reg[CHG_INT2]);
 
 	/* AFC_INT */
@@ -183,21 +183,9 @@ static irqreturn_t s2mu004_irq_thread(int irq, void *data)
 				&temp_vdadc);
 	pr_info("%s: 0x48 (0x%02x)\n",
 			__func__, temp_vdadc);
-
 	/* MUIC INT1 ~ INT2 */
 	ret = s2mu004_bulk_read(s2mu004->i2c, S2MU004_REG_MUIC_INT1,
 				S2MU004_NUM_IRQ_MUIC_REGS, &irq_reg[MUIC_INT1]);
-
-	/* 
-	* in case of skipping the muic vbus off interrupt,
-	* set the chg_int UVLO to MUIC VBUS off int.
-	*/
-	ret = s2mu004_read_reg(s2mu004->i2c, S2MU004_REG_SC_STATUS0,
-				&chg_status);
-
-	if (!(chg_status & 0xE0) && (irq_reg[CHG_INT1] & 0x80))
-		irq_reg[MUIC_INT2] |= 0x80;
-
 	pr_info("%s: muic interrupt(0x%02x, 0x%02x)\n", __func__,
 			irq_reg[MUIC_INT1], irq_reg[MUIC_INT2]);
 

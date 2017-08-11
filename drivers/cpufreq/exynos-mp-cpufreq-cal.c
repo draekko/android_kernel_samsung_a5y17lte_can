@@ -153,7 +153,7 @@ static int exynos_mp_cpufreq_init_cal_table(cluster_type cluster)
 	int table_size, cl_id, i;
 	struct dvfs_rate_volt *ptr_temp_table;
 	struct exynos_dvfs_info *ptr = exynos_info[cluster];
-	unsigned long cal_max_freq;
+	unsigned int cal_max_freq;
 	unsigned int cal_max_support_idx = 0;
 
 	if (!ptr->freq_table || !ptr->volt_table) {

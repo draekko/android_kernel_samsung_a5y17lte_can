@@ -2316,8 +2316,6 @@ static void s2mu004_muic_detect_dev(struct s2mu004_muic_data *muic_data)
 	int val1 = 0, val2 = 0, val3 = 0, val4 = 0, adc = 0;
 	int val5 = 0, val6 = 0, val7 = 0, check_adc = 0;
 
-	usleep_range(15000, 18000);
-
 	val1 = s2mu004_i2c_read_byte(i2c, S2MU004_REG_MUIC_DEVICE_TYPE1);
 	val2 = s2mu004_i2c_read_byte(i2c, S2MU004_REG_MUIC_DEVICE_TYPE2);
 	val3 = s2mu004_i2c_read_byte(i2c, S2MU004_REG_MUIC_DEVICE_TYPE3);

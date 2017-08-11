@@ -343,8 +343,8 @@ struct dw_mci_req_log {
 	u32				info1;
 	u32				info2;
 	u32				info3;
-	unsigned long			pending_events;
-	unsigned long			completed_events;
+	u32				pending_events;
+	u32				completed_events;
 	enum dw_mci_state		state;
 	enum dw_mci_state		state_cmd;
 	enum dw_mci_state		state_dat;
@@ -458,8 +458,8 @@ struct dw_mci_sfe_ram_dump {
 	u32			mpsctrl;
 	u32			cmd_status;
 	u32			data_status;
-	unsigned long		pending_events;
-	unsigned long		completed_events;
+	u32			pending_events;
+	u32			completed_events;
 	u32			host_state;
 	u32			cmd_index;
 	u32			fifo_count;

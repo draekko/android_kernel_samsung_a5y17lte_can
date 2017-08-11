@@ -43,16 +43,6 @@
 				};
 			};
 		};
-
-		audio_codec_cod3026x: cod3026x@04 {
-			gpios = <&gpa0 4 0xf &gpf4 1 0x1>;
-			use-det-gdet-adc-mode;
-			but-zones-list = <&but_zones 226 0 399>, /* send/end */
-				<&but_zones 582 400 470>, /* google */
-				<&but_zones 115 471 655>, /* vol up */
-				<&but_zones 114 656 1100>; /* vol down */
-			mic-adc-range = <1430>;
-		};
 	};
 
 	hsi2c_6: hsi2c@138F0000 {

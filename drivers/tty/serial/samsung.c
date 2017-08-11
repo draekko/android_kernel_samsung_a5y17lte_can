@@ -1510,31 +1510,6 @@ void s3c24xx_serial_fifo_wait(void)
 EXPORT_SYMBOL_GPL(s3c24xx_serial_fifo_wait);
 
 #ifdef CONFIG_CPU_IDLE
-
-#define SERIAL_UART_CMDLINE	"/dev/ttySAC"
-#define SERIAL_TTYNUM		2
-static int cmdline_tty;
-
-/* For parsing AP tty port number from command line parameter */
-static int __init get_cmdline_tty(char *str)
-{
-	long num;
-	int ret;
-	int len = strspn(str, SERIAL_UART_CMDLINE);
-
-	ret = kstrtol(&(*(str + len)), 0, &num);
-	if (ret < 0) {
-		pr_info("%s : converting fail\n", __func__);
-		num = SERIAL_TTYNUM;
-	}
-
-	cmdline_tty = (int)num;
-	pr_info("%s : %s (%d) cmdlint_tty: %d\n", __func__, str, len, cmdline_tty);
-
-	return cmdline_tty;
-}
-__setup("androidboot.sec_atd.tty=", get_cmdline_tty);
-
 static int s3c24xx_serial_notifier(struct notifier_block *self,
 				unsigned long cmd, void *v)
 {
@@ -1550,13 +1525,10 @@ static int s3c24xx_serial_notifier(struct notifier_block *self,
 
 	case SICD_ENTER:
 		list_for_each_entry(ourport, &drvdata_list, node) {
+			if (uart_console(&ourport->port))
+				continue;
+
 			port = &ourport->port;
-
-			if (uart_console(port))
-				continue;
-
-			if (port->line == cmdline_tty)
-				continue;
 
 			if (port->state->pm_state == UART_PM_STATE_OFF)
 				continue;
@@ -1574,13 +1546,10 @@ static int s3c24xx_serial_notifier(struct notifier_block *self,
 
 	case SICD_EXIT:
 		list_for_each_entry(ourport, &drvdata_list, node) {
+			if (uart_console(&ourport->port))
+				continue;
+
 			port = &ourport->port;
-
-			if (uart_console(port))
-				continue;
-
-			if (port->line == cmdline_tty)
-				continue;
 
 			if (port->state->pm_state == UART_PM_STATE_OFF)
 				continue;

@@ -106,7 +106,7 @@
 
 #define INTR_BUFFER_SIZE           28
 
-#define DRIVER_NAME		 "usb_mtp_gadget"
+#define DRIVER_NAME		 "mtp_usb"
 
 #define MAX_GUID_SIZE	0x28
 static const char mtpg_longname[] =	"mtp";
@@ -1233,7 +1233,7 @@ static int mtpg_release_device(struct inode *ip, struct file *fp)
 	return 0;
 }
 
-/* file operations for MTP device /dev/usb_mtp_gadget */
+/* file operations for MTP device /dev/mtp_usb */
 static const struct file_operations mtpg_fops = {
 	.owner   = THIS_MODULE,
 	.read    = mtpg_read,

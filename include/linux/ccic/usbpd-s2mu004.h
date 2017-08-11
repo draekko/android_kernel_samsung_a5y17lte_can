@@ -220,7 +220,7 @@ typedef enum {
 	PLUG_CTRL_RP330 = 3
 } CCIC_RP_SCR_SEL;
 
-#define DUAL_ROLE_SET_MODE_WAIT_MS 1500
+#define DUAL_ROLE_SET_MODE_WAIT_MS 2000
 #endif
 typedef enum {
 	CLIENT_OFF = 0,

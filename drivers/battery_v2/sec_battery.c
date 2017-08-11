@@ -3759,7 +3759,6 @@ static void sec_bat_cable_work(struct work_struct *work)
 				struct sec_battery_info, cable_work.work);
 	union power_supply_propval val;
 	int current_cable_type, prev_cable_type;
-	bool keep_charging_state = false;
 
 	dev_info(battery->dev, "%s: Start\n", __func__);
 	sec_bat_set_current_event(battery, SEC_BAT_CURRENT_EVENT_SKIP_HEATING_CONTROL, 0);
@@ -3851,15 +3850,6 @@ static void sec_bat_cable_work(struct work_struct *work)
 	}
 #endif
 
-	if (battery->charging_block &&
-		((battery->cable_type != POWER_SUPPLY_TYPE_BATTERY && current_cable_type == POWER_SUPPLY_TYPE_HV_MAINS_CHG_LIMIT) ||
-		 (current_cable_type != POWER_SUPPLY_TYPE_BATTERY && battery->cable_type == POWER_SUPPLY_TYPE_HV_MAINS_CHG_LIMIT) ||
-		 (battery->current_event & SEC_BAT_CURRENT_EVENT_AFC))) {
-		keep_charging_state = true;
-		pr_info("%s: keep charging state (prev cable type:%d, now cable type:%d)\n",
-				__func__, battery->cable_type, current_cable_type);
-	}
-
 	prev_cable_type = battery->cable_type;
 	battery->cable_type = current_cable_type;
 #if defined(CONFIG_CALC_TIME_TO_FULL)
@@ -3885,6 +3875,7 @@ static void sec_bat_cable_work(struct work_struct *work)
 	 */
 	wake_lock_timeout(&battery->vbus_wake_lock, HZ * 10);
 
+	battery->health = POWER_SUPPLY_HEALTH_GOOD;
 	if (battery->cable_type == POWER_SUPPLY_TYPE_BATTERY ||
 		((battery->pdata->cable_check_type &
 		SEC_BATTERY_CABLE_CHECK_NOINCOMPATIBLECHARGE) &&
@@ -3914,8 +3905,6 @@ static void sec_bat_cable_work(struct work_struct *work)
 		cancel_delayed_work(&battery->timetofull_work);
 #endif
 		battery->wc_cv_mode = false;
-
-		battery->health = POWER_SUPPLY_HEALTH_GOOD;
 		if (sec_bat_set_charge(battery, SEC_BAT_CHG_MODE_CHARGING_OFF))
 			goto end_of_cable_work;
 	} else if (battery->slate_mode == true) {
@@ -3944,22 +3933,18 @@ static void sec_bat_cable_work(struct work_struct *work)
 			battery->charging_mode = SEC_BATTERY_CHARGING_NONE;
 			battery->status = POWER_SUPPLY_STATUS_DISCHARGING;
 		} else {
-			if (!keep_charging_state) {
-				if (battery->pdata->full_check_type !=
-						SEC_BATTERY_FULLCHARGED_NONE)
-					battery->charging_mode =
-						SEC_BATTERY_CHARGING_1ST;
-				else
-					battery->charging_mode =
-						SEC_BATTERY_CHARGING_2ND;
+			if (battery->pdata->full_check_type !=
+				SEC_BATTERY_FULLCHARGED_NONE)
+				battery->charging_mode =
+					SEC_BATTERY_CHARGING_1ST;
+			else
+				battery->charging_mode =
+					SEC_BATTERY_CHARGING_2ND;
 
-				battery->health = POWER_SUPPLY_HEALTH_GOOD;
-			}
-			
 			if (battery->status == POWER_SUPPLY_STATUS_FULL)
 				sec_bat_set_charging_status(battery,
 						POWER_SUPPLY_STATUS_FULL);
-			else if (!keep_charging_state)
+			else
 				sec_bat_set_charging_status(battery,
 						POWER_SUPPLY_STATUS_CHARGING);
 		}
@@ -3978,7 +3963,7 @@ static void sec_bat_cable_work(struct work_struct *work)
 			battery->cable_type == POWER_SUPPLY_TYPE_POWER_SHARING) {
 			if (sec_bat_set_charge(battery, SEC_BAT_CHG_MODE_CHARGING_OFF))
 				goto end_of_cable_work;
-		} else if (!keep_charging_state) {
+		} else {
 			if (sec_bat_set_charge(battery, SEC_BAT_CHG_MODE_CHARGING))
 				goto end_of_cable_work;
 		}

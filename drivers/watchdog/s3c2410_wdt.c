@@ -361,8 +361,8 @@ static int s3c2410wdt_set_min_max_timeout(struct watchdog_device *wdd)
 	}
 
 	wdd->min_timeout = 1;
-	wdd->max_timeout = (unsigned int)(S3C2410_WTCNT_MAX *
-		(S3C2410_WTCON_PRESCALE_MAX + 1) * S3C2410_WTCON_DIVMAX / freq);
+	wdd->max_timeout = S3C2410_WTCNT_MAX *
+		(S3C2410_WTCON_PRESCALE_MAX + 1) * S3C2410_WTCON_DIVMAX / freq;
 
 	return 0;
 }

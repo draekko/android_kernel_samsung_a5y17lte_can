@@ -715,7 +715,6 @@ static int isfw_debug_open(struct inode *inode, struct file *file)
 static ssize_t isfw_debug_read(struct file *file, char __user *user_buf,
 	size_t buf_len, loff_t *ppos)
 {
-	int ret = 0;
 	void *read_ptr;
 	size_t write_vptr, read_vptr, buf_vptr;
 	size_t read_cnt, read_cnt1, read_cnt2;
@@ -748,11 +747,7 @@ retry:
 		if (read_cnt1 > buf_vptr)
 			read_cnt1 = buf_vptr;
 
-		ret = copy_to_user(user_buf, read_ptr, read_cnt1);
-		if (ret) {
-			err("[DBG] failed copying %d bytes of debug log\n", ret);
-			return ret;
-		}
+		memcpy(user_buf, read_ptr, read_cnt1);
 		fimc_is_debug.read_vptr += read_cnt1;
 		buf_vptr -= read_cnt1;
 	}
@@ -769,11 +764,7 @@ retry:
 		if (read_cnt2 > buf_vptr)
 			read_cnt2 = buf_vptr;
 
-		ret = copy_to_user(user_buf, read_ptr, read_cnt2);
-		if (ret) {
-			err("[DBG] failed copying %d bytes of debug log\n", ret);
-			return ret;
-		}
+		memcpy(user_buf, read_ptr, read_cnt2);
 		fimc_is_debug.read_vptr += read_cnt2;
 		buf_vptr -= read_cnt2;
 	}
@@ -793,7 +784,6 @@ retry:
 static ssize_t isfw_debug_read(struct file *file, char __user *user_buf,
 	size_t buf_len, loff_t *ppos)
 {
-	int ret = 0;
 	void *read_ptr;
 	size_t write_vptr, read_vptr, buf_vptr;
 	size_t read_cnt, read_cnt1, read_cnt2;
@@ -824,11 +814,7 @@ retry:
 		if (read_cnt1 > buf_vptr)
 			read_cnt1 = buf_vptr;
 
-		ret = copy_to_user(user_buf, read_ptr, read_cnt1);
-		if (ret) {
-			err("[DBG] failed copying %d bytes of debug log\n", ret);
-			return ret;
-		}
+		memcpy(user_buf, read_ptr, read_cnt1);
 		fimc_is_debug.read_vptr += read_cnt1;
 		buf_vptr -= read_cnt1;
 	}
@@ -845,11 +831,7 @@ retry:
 		if (read_cnt2 > buf_vptr)
 			read_cnt2 = buf_vptr;
 
-		ret = copy_to_user(user_buf, read_ptr, read_cnt2);
-		if (ret) {
-			err("[DBG] failed copying %d bytes of debug log\n", ret);
-			return ret;
-		}
+		memcpy(user_buf, read_ptr, read_cnt2);
 		fimc_is_debug.read_vptr += read_cnt2;
 		buf_vptr -= read_cnt2;
 	}

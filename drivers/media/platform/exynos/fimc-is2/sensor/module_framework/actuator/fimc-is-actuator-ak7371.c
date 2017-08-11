@@ -23,8 +23,6 @@
 
 #include "fimc-is-helper-i2c.h"
 
-#include "interface/fimc-is-interface-library.h"
-
 #define ACTUATOR_NAME		"AK7371"
 
 #define DEF_AK7371_FIRST_POSITION		120
@@ -36,7 +34,6 @@
 #define AK7371_ACTIVEMODE_ADDR  0x2 // AK7371 reg CONT1
 #define AK7371_ACTIVEMODE_OUTDIS 0x0
 
-extern struct fimc_is_lib_support gPtr_lib_support;
 extern struct fimc_is_sysfs_actuator sysfs_actuator;
 
 static int sensor_ak7371_write_position(struct i2c_client *client, u32 val)
@@ -165,11 +162,6 @@ int sensor_ak7371_actuator_init(struct v4l2_subdev *subdev, u32 val)
 	do_gettimeofday(&st);
 #endif
 
-	long cal_addr;
-	u32 cal_data;
-
-	int first_position = DEF_AK7371_FIRST_POSITION;
-
 	BUG_ON(!subdev);
 
 	dbg_sensor("%s\n", __func__);
@@ -201,24 +193,10 @@ int sensor_ak7371_actuator_init(struct v4l2_subdev *subdev, u32 val)
 	}
 #endif
 
-	/* EEPROM AF calData address */
-	if (gPtr_lib_support.binary_load_flg) {
-		/* get pan_focus */
-		cal_addr = gPtr_lib_support.minfo->kvaddr_rear_cal + EEPROM_OEM_BASE;
-		memcpy((void *)&cal_data, (void *)cal_addr, sizeof(cal_data));
-
-		if (cal_data > 0)
-			first_position = cal_data;
-	} else {
-		warn("SDK library is not loaded");
-	}
-
-	ret = sensor_ak7371_write_position(client, first_position);
+	ret = sensor_ak7371_write_position(client, DEF_AK7371_FIRST_POSITION);
 	if (ret <0)
 		goto p_err;
-	actuator->position = first_position;
 
-	/* Go active mode */
 	ret = fimc_is_sensor_addr8_write8(client, AK7371_ACTIVEMODE_ADDR, AK7371_ACTIVEMODE_OUTDIS);
 	if (ret <0)
 		goto p_err;

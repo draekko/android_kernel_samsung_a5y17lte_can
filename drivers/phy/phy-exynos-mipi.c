@@ -63,7 +63,7 @@ static int __set_phy_isolation(struct regmap *reg_pmu,
 	unsigned int val;
 	int ret;
 
-	val = on ? (unsigned int)EXYNOS_MIPI_PHY_ISO_BYPASS : 0;
+	val = on ? EXYNOS_MIPI_PHY_ISO_BYPASS : 0;
 
 	ret = regmap_update_bits(reg_pmu, offset,
 			EXYNOS_MIPI_PHY_ISO_BYPASS, val);

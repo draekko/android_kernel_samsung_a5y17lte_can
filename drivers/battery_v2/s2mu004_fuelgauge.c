@@ -578,7 +578,6 @@ static int s2mu004_get_rawsoc(struct s2mu004_fuelgauge_data *fuelgauge)
 	bool charging_enabled = false;
 	union power_supply_propval value;
 	int force_power_off_voltage = 0;
-	int rbat = 0;
 
 	int avg_current = 0, avg_vbat = 0, vbat = 0, curr = 0, avg_monout_vbat = 0;
 	int ocv_pwroff = 0, ocv_pwr_voltagemode =0;
@@ -703,13 +702,6 @@ static int s2mu004_get_rawsoc(struct s2mu004_fuelgauge_data *fuelgauge)
 	avg_monout_vbat =  s2mu004_get_monout_avgvbat(fuelgauge);
 	ocv_pwr_voltagemode = avg_monout_vbat - avg_current*30 /100;
 
-	if(avg_current < (-500))
-		rbat = 10;
-	else
-		rbat = 30;
-
-	ocv_pwr_voltagemode = avg_monout_vbat - avg_current*rbat /100;
-
 	/* switch to voltage mocd for accuracy */
 	if ((fuelgauge->info.soc <= 300) || ((ocv_pwr_voltagemode <= 3600) && (avg_current < 10))) {
 		if(fuelgauge->mode == CURRENT_MODE) { /* switch to VOLTAGE_MODE */
@@ -768,7 +760,7 @@ static int s2mu004_get_rawsoc(struct s2mu004_fuelgauge_data *fuelgauge)
 		__func__, fuelgauge->mode, force_power_off_voltage);
 
 	if (((avg_current < (-17)) && (curr < (-17))) &&
-		((avg_monout_vbat - avg_current*rbat /100) <= 3500) && (fuelgauge->info.soc > 100)) {
+		((avg_monout_vbat - avg_current*30 /100) <= 3500) && (fuelgauge->info.soc > 100)) {
 		ocv_pwroff = 3300;
 		target_soc = s2mu004_get_soc_from_ocv(fuelgauge, ocv_pwroff);
 		pr_info("%s : F/G reset Start - current flunctuation\n", __func__);

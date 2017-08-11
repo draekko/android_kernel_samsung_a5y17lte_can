@@ -20,7 +20,7 @@
 #define F2_4	5
 #define F2_45	6
 #define F2_6	7
-#define F2_7	8
+#define F2_7	8	/* Added for 6A3 */
 #define F2_8	9
 #define F4_0	10
 #define F5_6	11
@@ -29,7 +29,6 @@
 #define F16_0	14
 #define F22_0	15
 #define F32_0	16
-#define F1_7	17
 
 #define FLITE_ID_NOTHING	100
 

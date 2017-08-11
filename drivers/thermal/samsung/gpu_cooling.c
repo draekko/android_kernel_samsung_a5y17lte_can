@@ -51,7 +51,7 @@
 struct gpufreq_cooling_device {
 	int id;
 	struct thermal_cooling_device *cool_dev;
-	unsigned long gpufreq_state;
+	unsigned int gpufreq_state;
 	unsigned int gpufreq_val;
 };
 static DEFINE_IDR(gpufreq_idr);

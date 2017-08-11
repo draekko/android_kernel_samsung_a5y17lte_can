@@ -29,7 +29,7 @@ static int thread_func(void *data)
 	size_t size = PAGE_SIZE;
 	unsigned char *disk, *comp, *decomp;
 	int comp_len;
-	unsigned int i;
+	int i;
 	int fd = -1;
 
 	/* set string to disk buffer */

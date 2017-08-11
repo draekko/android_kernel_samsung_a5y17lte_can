@@ -196,7 +196,6 @@ static void csis_s_all_vc_dma_buf(struct fimc_is_device_csi *csi)
 	struct fimc_is_subdev *dma_subdev;
 	struct fimc_is_framemgr *framemgr;
 	struct fimc_is_frame *frame;
-	unsigned long flags;
 
 	/* dma setting for several virtual ch 0 ~ 3 */
 	for (vc = CSI_VIRTUAL_CH_0; vc < CSI_VIRTUAL_CH_MAX; vc++) {
@@ -230,7 +229,7 @@ static void csis_s_all_vc_dma_buf(struct fimc_is_device_csi *csi)
 			clear_bit((CSIS_BUF_ERR_VC0 + vc), &csi->state);
 		}
 
-		framemgr_e_barrier_irqs(framemgr, FMGR_IDX_16, flags);
+		framemgr_e_barrier(framemgr, 0);
 
 		frame = peek_frame(framemgr, FS_REQUEST);
 
@@ -277,7 +276,7 @@ static void csis_s_all_vc_dma_buf(struct fimc_is_device_csi *csi)
 			csi->pre_dma_enable[vc] = cur_dma_enable;
 		}
 
-		framemgr_x_barrier_irqr(framemgr, FMGR_IDX_16, flags);
+		framemgr_x_barrier(framemgr, 0);
 	}
 }
 
@@ -288,7 +287,6 @@ static void csis_s_vc_dma_multibuf(struct fimc_is_device_csi *csi)
 	struct fimc_is_subdev *dma_subdev;
 	struct fimc_is_framemgr *framemgr;
 	struct fimc_is_frame *frame;
-	unsigned long flags;
 
 	/* dma setting for several virtual ch 1 ~ 3 */
 	for (vc = CSI_VIRTUAL_CH_1; vc < CSI_VIRTUAL_CH_MAX; vc++) {
@@ -312,7 +310,7 @@ static void csis_s_vc_dma_multibuf(struct fimc_is_device_csi *csi)
 		if (test_bit((CSIS_SET_MULTIBUF_VC1 + (vc - 1)), &csi->state))
 			continue;
 
-		framemgr_e_barrier_irqs(framemgr, FMGR_IDX_19, flags);
+		framemgr_e_barrier(framemgr, 0);
 		for (i = 0; i < framemgr->num_frames; i++) {
 			frame = &framemgr->frames[i];
 
@@ -326,7 +324,7 @@ static void csis_s_vc_dma_multibuf(struct fimc_is_device_csi *csi)
 			}
 		}
 
-		framemgr_x_barrier_irqr(framemgr, FMGR_IDX_19, flags);
+		framemgr_x_barrier(framemgr, 0);
 
 		set_bit((CSIS_SET_MULTIBUF_VC1 + (vc - 1)), &csi->state);
 	}
@@ -341,7 +339,6 @@ static void csis_flush_vc_buf_done(struct fimc_is_device_csi *csi, u32 vc,
 	struct fimc_is_framemgr *framemgr;
 	struct fimc_is_frame *frame;
 	struct fimc_is_video_ctx *vctx;
-	unsigned long flags;
 
 	device = container_of(csi->subdev, struct fimc_is_device_sensor, subdev_csi);
 
@@ -361,7 +358,7 @@ static void csis_flush_vc_buf_done(struct fimc_is_device_csi *csi, u32 vc,
 	}
 
 	BUG_ON(!framemgr);
-	framemgr_e_barrier_irqs(framemgr, FMGR_IDX_18, flags);
+	framemgr_e_barrier(framemgr, 0);
 
 	frame = peek_frame(framemgr, target);
 	while (frame) {
@@ -370,7 +367,7 @@ static void csis_flush_vc_buf_done(struct fimc_is_device_csi *csi, u32 vc,
 		frame = peek_frame(framemgr, target);
 	}
 
-	framemgr_x_barrier_irqr(framemgr, FMGR_IDX_18, flags);
+	framemgr_x_barrier(framemgr, 0);
 }
 
 static void csis_flush_vc_multibuf(struct fimc_is_device_csi *csi, u32 vc)
@@ -379,7 +376,6 @@ static void csis_flush_vc_multibuf(struct fimc_is_device_csi *csi, u32 vc)
 	struct fimc_is_subdev *subdev;
 	struct fimc_is_framemgr *framemgr;
 	struct fimc_is_frame *frame;
-	unsigned long flags;
 
 	subdev = csi->dma_subdev[vc];
 
@@ -390,7 +386,7 @@ static void csis_flush_vc_multibuf(struct fimc_is_device_csi *csi, u32 vc)
 
 	framemgr = GET_SUBDEV_FRAMEMGR(subdev);
 
-	framemgr_e_barrier_irqs(framemgr, FMGR_IDX_20, flags);
+	framemgr_e_barrier(framemgr, 0);
 	for (i = 0; i < framemgr->num_frames; i++) {
 		frame = &framemgr->frames[i];
 
@@ -399,7 +395,7 @@ static void csis_flush_vc_multibuf(struct fimc_is_device_csi *csi, u32 vc)
 			trans_frame(framemgr, frame, FS_FREE);
 		}
 	}
-	framemgr_x_barrier_irqr(framemgr, FMGR_IDX_20, flags);
+	framemgr_x_barrier(framemgr, 0);
 
 	clear_bit((CSIS_SET_MULTIBUF_VC1 + (vc - 1)), &csi->state);
 }
@@ -566,9 +562,8 @@ static void csi_dma_tag(struct v4l2_subdev *subdev,
 {
 	struct fimc_is_frame *frame = NULL;
 	struct fimc_is_frame *frame_done = NULL;
-	unsigned long flags;
 
-	framemgr_e_barrier_irqs(framemgr, FMGR_IDX_21, flags);
+	framemgr_e_barrier(framemgr, 0);
 
 	if (csi_hw_g_output_dma_enable(csi->base_reg, vc)) {
 		if (framemgr->queued_count[FS_PROCESS] == 2) {
@@ -590,7 +585,7 @@ static void csi_dma_tag(struct v4l2_subdev *subdev,
 		}
 	}
 
-	framemgr_x_barrier_irqr(framemgr, FMGR_IDX_21, flags);
+	framemgr_x_barrier(framemgr, 0);
 
 	v4l2_subdev_notify(subdev, CSIS_NOTIFY_FEND, frame_done);
 }
@@ -602,12 +597,12 @@ static void csi_multibuf_dma_tag(struct v4l2_subdev *subdev,
 	struct fimc_is_frame *frame = NULL;
 	struct fimc_is_frame *next_frame = NULL;
 	u32 frameptr = 0;
-	unsigned long flags;
+
+	framemgr_e_barrier(framemgr, 0);
 
 	frameptr = csi_hw_g_frameptr(csi->base_reg, vc);
 
 	/* update processed frame state */
-	framemgr_e_barrier_irqs(framemgr, FMGR_IDX_22, flags);
 	frame = &framemgr->frames[frameptr];
 	if (frame) {
 		if (frame->state == FS_PROCESS) {
@@ -630,7 +625,7 @@ static void csi_multibuf_dma_tag(struct v4l2_subdev *subdev,
 		}
 	}
 
-	framemgr_x_barrier_irqr(framemgr, FMGR_IDX_22, flags);
+	framemgr_x_barrier(framemgr, 0);
 }
 
 static void tasklet_csis_dma_vc0(unsigned long data)

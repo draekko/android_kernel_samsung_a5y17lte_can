@@ -1414,17 +1414,43 @@ static int sc_prepare_2nd_scaling(struct sc_ctx *ctx,
 		return -ENOMEM;
 
 	limit = &sc->variant->limit_input;
-	if (*v_ratio > SCALE_RATIO_CONST(4, 1))
+	if (*v_ratio > SCALE_RATIO_CONST(4, 1)) {
 		crop.height = ((src_height + 7) / 8) * 2;
+		if (crop.height < limit->min_h) {
+			if (SCALE_RATIO(limit->min_h,
+						ctx->d_frame.crop.height) >
+					SCALE_RATIO_CONST(4, 1)) {
+				dev_err(sc->dev,
+						"Failed height scale down %d -> %d\n",
+						src_height,
+						ctx->d_frame.crop.height);
 
-	if (crop.height < limit->min_h)
-		crop.height = limit->min_h;
+				free_intermediate_frame(ctx);
+				return -EINVAL;
+			}
 
-	if (*h_ratio > SCALE_RATIO_CONST(4, 1))
+			crop.height = limit->min_h;
+		}
+	}
+
+	if (*h_ratio > SCALE_RATIO_CONST(4, 1)) {
 		crop.width = ((src_width + 7) / 8) * 2;
+		if (crop.width < limit->min_w) {
+			if (SCALE_RATIO(limit->min_w,
+						ctx->d_frame.crop.width) >
+					SCALE_RATIO_CONST(4, 1)) {
+				dev_err(sc->dev,
+						"Failed width scale down %d -> %d\n",
+						src_width,
+						ctx->d_frame.crop.width);
 
-	if (crop.width < limit->min_w)
-		crop.width = limit->min_w;
+				free_intermediate_frame(ctx);
+				return -EINVAL;
+			}
+
+			crop.width = limit->min_w;
+		}
+	}
 
 	pixfmt = target_fmt->pixelformat;
 
@@ -1965,37 +1991,6 @@ static unsigned int sc_get_src_blend_pixelformat(struct sc_ctx *ctx,
 	}
 }
 
-struct sc_dev *g_sc_0;
-static wait_queue_head_t scaler_cp_ready_wq;
-static wait_queue_head_t scaler_cp_sync_wq;
-static unsigned long scaler_cp_state;
-static atomic_t cp_ref_cnt;
-
-enum {
-	MSCL_EMPTY,
-	MSCL_CP_REQ
-};
-
-static bool scaler_wait_done(struct sc_ctx *ctx)
-{
-	int ret = 0;
-	struct sc_dev *sc = ctx->sc_dev;
-
-	if(ctx->cp_enabled) {
-		set_bit(MSCL_CP_REQ, &scaler_cp_state);
-		wait_event(scaler_cp_ready_wq,
-				test_bit(MSCL_EMPTY, &scaler_cp_state));
-		atomic_inc(&cp_ref_cnt);
-		wake_up(&scaler_cp_sync_wq);
-		clear_bit(MSCL_CP_REQ, &scaler_cp_state);
-	} else {
-		atomic_dec(&cp_ref_cnt);
-	}
-	dev_info(sc->dev, "%s cp_enabled = %d, cp_refcnt = %d\n",
-			__func__, ctx->cp_enabled, atomic_read(&cp_ref_cnt));
-	return ret;
-}
-
 static int sc_s_ctrl(struct v4l2_ctrl *ctrl)
 {
 	struct sc_ctx *ctx;
@@ -2088,10 +2083,7 @@ static int sc_s_ctrl(struct v4l2_ctrl *ctrl)
 		ctx->csc.csc_range = ctrl->val;
 		break;
 	case V4L2_CID_CONTENT_PROTECTION:
-		if(ctx->cp_enabled != ctrl->val) {
-			ctx->cp_enabled = !!ctrl->val;
-			scaler_wait_done(ctx);
-		}
+		ctx->cp_enabled = !!ctrl->val;
 		break;
 	case SC_CID_DNOISE_FT:
 		ctx->dnoise_ft.strength = ctrl->val;
@@ -2422,6 +2414,7 @@ static int sc_open(struct file *file)
 	struct sc_dev *sc = video_drvdata(file);
 	struct sc_ctx *ctx;
 	int ret;
+
 	ctx = kzalloc(sizeof(*ctx), GFP_KERNEL);
 	if (!ctx) {
 		dev_err(sc->dev, "no memory for open context\n");
@@ -2448,19 +2441,40 @@ static int sc_open(struct file *file)
 	ctx->d_frame.sc_fmt = &sc_formats[0];
 	ctx->src_blend_frame.sc_fmt = &sc_formats[0];
 
+	if (!IS_ERR(sc->pclk)) {
+		ret = clk_prepare(sc->pclk);
+		if (ret) {
+			dev_err(sc->dev, "%s: failed to prepare PCLK(err %d)\n",
+					__func__, ret);
+			goto err_pclk_prepare;
+		}
+	}
+
+	if (!IS_ERR(sc->aclk)) {
+		ret = clk_prepare(sc->aclk);
+		if (ret) {
+			dev_err(sc->dev, "%s: failed to prepare ACLK(err %d)\n",
+					__func__, ret);
+			goto err_aclk_prepare;
+		}
+	}
+
 	/* Setup the device context for mem2mem mode. */
 	ctx->m2m_ctx = v4l2_m2m_ctx_init(sc->m2m.m2m_dev, ctx, queue_init);
 	if (IS_ERR(ctx->m2m_ctx)) {
 		ret = -EINVAL;
 		goto err_ctx;
 	}
-	dev_info(sc->dev, "%s cp_enabled = %d, cp_refcnt = %d\n",
-			__func__, ctx->cp_enabled, atomic_read(&cp_ref_cnt));
-
 
 	return 0;
 
 err_ctx:
+	if (!IS_ERR(sc->aclk))
+		clk_unprepare(sc->aclk);
+err_aclk_prepare:
+	if (!IS_ERR(sc->pclk))
+		clk_unprepare(sc->pclk);
+err_pclk_prepare:
 	v4l2_fh_del(&ctx->fh);
 err_fh:
 	v4l2_ctrl_handler_free(&ctx->ctrl_handler);
@@ -2478,14 +2492,14 @@ static int sc_release(struct file *file)
 
 	sc_dbg("refcnt= %d", atomic_read(&sc->m2m.in_use));
 
-	if (ctx->cp_enabled) {
-		atomic_dec(&cp_ref_cnt);
-		dev_info(sc->dev, "%s cp_enabled = %d, cp_refcnt = %d\n",
-			__func__, ctx->cp_enabled, atomic_read(&cp_ref_cnt));
-	}
 	atomic_dec(&sc->m2m.in_use);
-	v4l2_m2m_ctx_release(ctx->m2m_ctx);
+
 	destroy_intermediate_frame(ctx);
+	v4l2_m2m_ctx_release(ctx->m2m_ctx);
+	if (!IS_ERR(sc->aclk))
+		clk_unprepare(sc->aclk);
+	if (!IS_ERR(sc->pclk))
+		clk_unprepare(sc->pclk);
 	v4l2_ctrl_handler_free(&ctx->ctrl_handler);
 	v4l2_fh_del(&ctx->fh);
 	v4l2_fh_exit(&ctx->fh);
@@ -2601,11 +2615,13 @@ static void sc_watchdog(unsigned long arg)
 
 }
 
-static void sc_set_csc_coef(struct sc_dev *sc, struct sc_ctx *ctx)
+static void sc_set_csc_coef(struct sc_ctx *ctx)
 {
 	struct sc_frame *s_frame, *d_frame;
+	struct sc_dev *sc;
 	enum sc_csc_idx idx;
 
+	sc = ctx->sc_dev;
 	s_frame = &ctx->s_frame;
 	d_frame = &ctx->d_frame;
 
@@ -2702,8 +2718,9 @@ static bool sc_process_2nd_stage(struct sc_dev *sc, struct sc_ctx *ctx)
 	return true;
 }
 
-static void sc_set_dithering(struct sc_dev *sc, struct sc_ctx *ctx)
+static void sc_set_dithering(struct sc_ctx *ctx)
 {
+	struct sc_dev *sc = ctx->sc_dev;
 	unsigned int val = 0;
 
 	if (ctx->dith)
@@ -2775,8 +2792,10 @@ static void sc_set_prefetch_buffers(struct sc_dev *sc, struct sc_ctx *ctx)
 	sysmmu_set_prefetch_buffer_by_region(sc->dev, pb_reg, i);
 }
 
-static void sc_set_initial_phase(struct sc_dev *sc, struct sc_ctx *ctx)
+static void sc_set_initial_phase(struct sc_ctx *ctx)
 {
+	struct sc_dev *sc = ctx->sc_dev;
+
 	/* TODO: need to check scaling, csc, rot according to H/W Goude  */
 	sc_hwset_src_init_phase(sc, &ctx->init_phase);
 }
@@ -2799,10 +2818,6 @@ static int sc_run_next_job(struct sc_dev *sc)
 
 	if (sc->current_ctx || list_empty(&sc->context_list)) {
 		/* a job is currently being processed or no job is to run */
-		if (sc->dev_id == 1 && list_empty(&sc->context_list)) {
-			set_bit(MSCL_EMPTY, &scaler_cp_state);
-			wake_up(&scaler_cp_ready_wq);
-		}
 		spin_unlock_irqrestore(&sc->ctxlist_lock, flags);
 		return 0;
 	}
@@ -2837,7 +2852,7 @@ static int sc_run_next_job(struct sc_dev *sc)
 		d_frame = &ctx->i_frame->frame;
 	}
 
-	sc_set_csc_coef(sc, ctx);
+	sc_set_csc_coef(ctx);
 
 	sc_hwset_src_image_format(sc, s_frame->sc_fmt);
 	sc_hwset_dst_image_format(sc, d_frame->sc_fmt);
@@ -2902,12 +2917,12 @@ static int sc_run_next_job(struct sc_dev *sc)
 	sc_hwset_dst_wh(sc, d_frame->crop.width, d_frame->crop.height);
 
 	if (sc->variant->initphase)
-		sc_set_initial_phase(sc, ctx);
+		sc_set_initial_phase(ctx);
 
 	sc_hwset_src_addr(sc, &s_frame->addr);
 	sc_hwset_dst_addr(sc, &d_frame->addr);
 
-	sc_set_dithering(sc, ctx);
+	sc_set_dithering(ctx);
 	if (ctx->bl_op) {
 		if (sc->variant->blending) {
 			src_blend_frame = &ctx->src_blend_frame;
@@ -2973,23 +2988,11 @@ static int sc_add_context_and_run(struct sc_dev *sc, struct sc_ctx *ctx)
 {
 	unsigned long flags;
 
-	if (sc->dev_id == 1 && test_bit(MSCL_CP_REQ, &scaler_cp_state))
-		wait_event(scaler_cp_sync_wq,
-				!test_bit(MSCL_CP_REQ, &scaler_cp_state));
+	spin_lock_irqsave(&sc->ctxlist_lock, flags);
+	list_add_tail(&ctx->node, &sc->context_list);
+	spin_unlock_irqrestore(&sc->ctxlist_lock, flags);
 
-	if (!atomic_read(&cp_ref_cnt)) {
-		spin_lock_irqsave(&sc->ctxlist_lock, flags);
-		list_add_tail(&ctx->node, &sc->context_list);
-		if (sc->dev_id == 1)
-			clear_bit(MSCL_EMPTY, &scaler_cp_state);
-		spin_unlock_irqrestore(&sc->ctxlist_lock, flags);
-		return sc_run_next_job(sc);
-	} else {
-		spin_lock_irqsave(&g_sc_0->ctxlist_lock, flags);
-		list_add_tail(&ctx->node, &g_sc_0->context_list);
-		spin_unlock_irqrestore(&g_sc_0->ctxlist_lock, flags);
-		return sc_run_next_job(g_sc_0);
-	}
+	return sc_run_next_job(sc);
 }
 
 static irqreturn_t sc_irq_handler(int irq, void *priv)
@@ -3032,7 +3035,7 @@ static irqreturn_t sc_irq_handler(int irq, void *priv)
 	clear_bit(CTX_RUN, &ctx->flags);
 
 	if (ctx->context_type == SC_CTX_V4L2_TYPE) {
-		BUG_ON(ctx != v4l2_m2m_get_curr_priv(ctx->sc_dev->m2m.m2m_dev));
+		BUG_ON(ctx != v4l2_m2m_get_curr_priv(sc->m2m.m2m_dev));
 
 		src_vb = v4l2_m2m_src_buf_remove(ctx->m2m_ctx);
 		dst_vb = v4l2_m2m_dst_buf_remove(ctx->m2m_ctx);
@@ -3060,7 +3063,7 @@ static irqreturn_t sc_irq_handler(int irq, void *priv)
 			sc_dbg("wake up blocked process by suspend\n");
 			wake_up(&sc->wait);
 		} else {
-			v4l2_m2m_job_finish(ctx->sc_dev->m2m.m2m_dev, ctx->m2m_ctx);
+			v4l2_m2m_job_finish(sc->m2m.m2m_dev, ctx->m2m_ctx);
 		}
 
 		/* Wake up from CTX_ABORT state */
@@ -3068,7 +3071,7 @@ static irqreturn_t sc_irq_handler(int irq, void *priv)
 			wake_up(&sc->wait);
 	} else {
 		struct m2m1shot_task *task =
-					m2m1shot_get_current_task(ctx->sc_dev->m21dev);
+					m2m1shot_get_current_task(sc->m21dev);
 
 		BUG_ON(ctx->context_type != SC_CTX_M2M1SHOT_TYPE);
 
@@ -3077,7 +3080,7 @@ static irqreturn_t sc_irq_handler(int irq, void *priv)
 				(unsigned long)ktime_us_delta(
 					ktime_get(), ctx->ktime_m2m1shot);
 
-		m2m1shot_task_finish(ctx->sc_dev->m21dev, task,
+		m2m1shot_task_finish(sc->m21dev, task,
 					SCALER_INT_OK(irq_status));
 	}
 
@@ -3457,12 +3460,31 @@ static int sc_m2m1shot_init_context(struct m2m1shot_context *m21ctx)
 {
 	struct sc_dev *sc = dev_get_drvdata(m21ctx->m21dev->dev);
 	struct sc_ctx *ctx;
+	int ret;
 
 	ctx = kzalloc(sizeof(*ctx), GFP_KERNEL);
 	if (!ctx)
 		return -ENOMEM;
 
 	atomic_inc(&sc->m2m.in_use);
+
+	if (!IS_ERR(sc->pclk)) {
+		ret = clk_prepare(sc->pclk);
+		if (ret) {
+			dev_err(sc->dev, "%s: failed to prepare PCLK(err %d)\n",
+					__func__, ret);
+			goto err_pclk;
+		}
+	}
+
+	if (!IS_ERR(sc->aclk)) {
+		ret = clk_prepare(sc->aclk);
+		if (ret) {
+			dev_err(sc->dev, "%s: failed to prepare ACLK(err %d)\n",
+					__func__, ret);
+			goto err_aclk;
+		}
+	}
 
 	ctx->context_type = SC_CTX_M2M1SHOT_TYPE;
 	INIT_LIST_HEAD(&ctx->node);
@@ -3475,6 +3497,12 @@ static int sc_m2m1shot_init_context(struct m2m1shot_context *m21ctx)
 	ctx->m21_ctx = m21ctx;
 
 	return 0;
+err_aclk:
+	if (!IS_ERR(sc->pclk))
+		clk_unprepare(sc->pclk);
+err_pclk:
+	kfree(ctx);
+	return ret;
 }
 
 static int sc_m2m1shot_free_context(struct m2m1shot_context *m21ctx)
@@ -3482,6 +3510,10 @@ static int sc_m2m1shot_free_context(struct m2m1shot_context *m21ctx)
 	struct sc_ctx *ctx = m21ctx->priv;
 
 	atomic_dec(&ctx->sc_dev->m2m.in_use);
+	if (!IS_ERR(ctx->sc_dev->aclk))
+		clk_unprepare(ctx->sc_dev->aclk);
+	if (!IS_ERR(ctx->sc_dev->pclk))
+		clk_unprepare(ctx->sc_dev->pclk);
 	BUG_ON(!list_empty(&ctx->node));
 	destroy_intermediate_frame(ctx);
 	kfree(ctx);
@@ -4126,24 +4158,6 @@ static int sc_probe(struct platform_device *pdev)
 		}
 	}
 
-	if (!IS_ERR(sc->pclk)) {
-		ret = clk_prepare(sc->pclk);
-		if (ret) {
-			dev_err(sc->dev, "%s: failed to prepare PCLK(err %d)\n",
-					__func__, ret);
-			goto err_ver_pclk_get;
-		}
-	}
-
-	if (!IS_ERR(sc->aclk)) {
-		ret = clk_prepare(sc->aclk);
-		if (ret) {
-			dev_err(sc->dev, "%s: failed to prepare ACLK(err %d)\n",
-					__func__, ret);
-			goto err_ver_aclk_get;
-		}
-	}
-
 	sc->version = SCALER_VERSION(2, 0, 0);
 
 	hwver = __raw_readl(sc->regs + SCALER_VER);
@@ -4163,11 +4177,10 @@ static int sc_probe(struct platform_device *pdev)
 	}
 
 	if (!IS_ERR(sc->aclk))
-		clk_disable(sc->aclk);
+		clk_disable_unprepare(sc->aclk);
 	if (!IS_ERR(sc->pclk))
-		clk_disable(sc->pclk);
-
-	pm_runtime_put(sc->dev);
+		clk_disable_unprepare(sc->pclk);
+	pm_runtime_put(&pdev->dev);
 
 	iovmm_set_fault_handler(&pdev->dev, sc_sysmmu_fault_handler, sc);
 	sc->busmon_nb = sc_busmon_nb;
@@ -4176,12 +4189,6 @@ static int sc_probe(struct platform_device *pdev)
 	dev_info(&pdev->dev,
 		"Driver probed successfully(version: %08x(%x))\n",
 		hwver, sc->version);
-	if (sc->dev_id == 0)
-		g_sc_0 = sc;
-
-	set_bit(MSCL_EMPTY, &scaler_cp_state);
-	init_waitqueue_head(&scaler_cp_ready_wq);
-	init_waitqueue_head(&scaler_cp_sync_wq);
 
 	return 0;
 err_ver_aclk_get:
@@ -4217,12 +4224,8 @@ static int sc_remove(struct platform_device *pdev)
 
 	vb2_ion_destroy_context(sc->alloc_ctx);
 
-	if (!IS_ERR(sc->aclk))
-		clk_unprepare(sc->aclk);
-	if (!IS_ERR(sc->pclk))
-		clk_unprepare(sc->pclk);
-
 	sc_clk_put(sc);
+
 	if (timer_pending(&sc->wdt.timer))
 		del_timer(&sc->wdt.timer);
 

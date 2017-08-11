@@ -919,7 +919,6 @@ static int fimc_is_sensor_notify_by_fstr(struct fimc_is_device_sensor *device, v
 	struct fimc_is_subdev *dma_subdev;
 	struct v4l2_control ctrl;
 	u32 cur_frameptr = 0;
-	unsigned long flags;
 
 	BUG_ON(!device);
 	BUG_ON(!arg);
@@ -942,7 +941,7 @@ static int fimc_is_sensor_notify_by_fstr(struct fimc_is_device_sensor *device, v
 	device->timestamp[hashkey] = fimc_is_get_timestamp();
 	device->timestampboot[hashkey] = fimc_is_get_timestamp_boot();
 
-	framemgr_e_barrier_irqs(framemgr, FMGR_IDX_28, flags);
+	framemgr_e_barrier(framemgr, FMGR_IDX_28);
 
 	frame = peek_frame(framemgr, FS_PROCESS);
 	if (frame) {
@@ -962,7 +961,7 @@ static int fimc_is_sensor_notify_by_fstr(struct fimc_is_device_sensor *device, v
 	}
 #endif
 
-	framemgr_x_barrier_irqr(framemgr, FMGR_IDX_28, flags);
+	framemgr_x_barrier(framemgr, FMGR_IDX_28);
 
 	switch (notification) {
 	case CSIS_NOTIFY_FSTART:
@@ -981,6 +980,9 @@ static int fimc_is_sensor_notify_by_fstr(struct fimc_is_device_sensor *device, v
 				continue;
 
 			framemgr = GET_SUBDEV_FRAMEMGR(dma_subdev);
+
+			framemgr_e_barrier(framemgr, 0);
+
 			if (test_bit(FIMC_IS_SUBDEV_INTERNAL_USE, &dma_subdev->state)) {
 				ctrl.id = V4L2_CID_IS_G_VC1_FRAMEPTR + (i - 1);
 				ret = v4l2_subdev_call(device->subdev_csi, core, g_ctrl, &ctrl);
@@ -993,15 +995,14 @@ static int fimc_is_sensor_notify_by_fstr(struct fimc_is_device_sensor *device, v
 				frame = &framemgr->frames[cur_frameptr];
 				frame->fcount = device->fcount;
 			} else {
-				framemgr_e_barrier_irqs(framemgr, FMGR_IDX_17, flags);
 				frame = peek_frame(framemgr, FS_PROCESS);
 				if (frame) {
 					frame->fcount = device->fcount;
 					fimc_is_sensor_subdev_tag(device, frame);
 				}
-				framemgr_x_barrier_irqr(framemgr, FMGR_IDX_17, flags);
 			}
 
+			framemgr_x_barrier(framemgr, 0);
 		}
 		break;
 	default:

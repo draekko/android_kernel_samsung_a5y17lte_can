@@ -1531,7 +1531,7 @@ static void __init exynos_ss_fixmap_header(void)
 
 static int __init exynos_ss_init_desc(void)
 {
-	unsigned long i, len;
+	unsigned int i, len;
 
 	/* initialize ess_desc */
 	memset((struct exynos_ss_desc *)&ess_desc, 0, sizeof(struct exynos_ss_desc));

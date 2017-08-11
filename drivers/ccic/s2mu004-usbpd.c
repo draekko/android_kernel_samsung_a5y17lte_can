@@ -135,12 +135,12 @@ void s2mu004_rprd_mode_change(struct s2mu004_usbpd_data *usbpd_data, u8 mode)
 	switch (mode) {
 	case TYPE_C_ATTACH_DFP: /* SRC */
 		s2mu004_set_detach(usbpd_data, mode);
-		msleep(1400);
+		msleep(1500);
 		s2mu004_set_attach(usbpd_data, mode);
 		break;
 	case TYPE_C_ATTACH_UFP: /* SNK */
 		s2mu004_set_detach(usbpd_data, mode);
-		msleep(1400);
+		msleep(1500);
 		s2mu004_set_attach(usbpd_data, mode);
 		break;
 	case TYPE_C_ATTACH_DRP: /* DRP */

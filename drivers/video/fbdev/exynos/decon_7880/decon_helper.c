@@ -658,7 +658,7 @@ void DISP_SS_DUMP(u32 type)
 {
 	struct decon_device *decon = get_decon_drvdata(0);
 
-	if (!decon || decon->disp_dump & BIT(type))
+	if (decon->disp_dump & BIT(type))
 		return;
 
 	switch (type) {

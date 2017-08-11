@@ -156,7 +156,7 @@
 					regulator-max-microvolt = <1300000>;
 					regulator-always-on;
 					regulator-boot-on;
-					regulator-ramp-delay = <6000>;
+					regulator-ramp-delay = <12000>;
 					regulator-initial-mode = <1>;
 					regulator-expected-consumer = <2>;
 				};
@@ -167,7 +167,7 @@
 					regulator-max-microvolt = <1300000>;
 					regulator-always-on;
 					regulator-boot-on;
-					regulator-ramp-delay = <6000>;
+					regulator-ramp-delay = <12000>;
 					regulator-initial-mode = <3>;
 					regulator-expected-consumer = <4>;
 				};
@@ -178,7 +178,7 @@
 					regulator-max-microvolt = <1300000>;
 					regulator-always-on;
 					regulator-boot-on;
-					regulator-ramp-delay = <6000>;
+					regulator-ramp-delay = <12000>;
 					regulator-initial-mode = <3>;
 				};
 

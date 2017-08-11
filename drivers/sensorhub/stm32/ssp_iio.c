@@ -161,7 +161,7 @@ void report_sensor_data(struct ssp_data *data, int type,
 	/* wake-up sensor */
 	if (type == SENSOR_TYPE_PROXIMITY || type == SENSOR_TYPE_SIGNIFICANT_MOTION
 		|| type == SENSOR_TYPE_TILT_DETECTOR || type == SENSOR_TYPE_PICK_UP_GESTURE) {
-		wake_lock_timeout(&data->ssp_wake_lock, 0.3 * HZ);
+		wake_lock_timeout(&data->ssp_wake_lock, 3 * HZ);
 	}
 }
 

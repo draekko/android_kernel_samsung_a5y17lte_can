@@ -23,14 +23,11 @@
 
 #include "fimc-is-helper-i2c.h"
 
-#include "interface/fimc-is-interface-library.h"
-
 #define ACTUATOR_NAME		"AK7348"
 
 #define DEF_AK7348_FIRST_POSITION		120
-#define DEF_AK7348_FIRST_DELAY			30
+#define DEF_AK7348_FIRST_DELAY			10
 
-extern struct fimc_is_lib_support gPtr_lib_support;
 extern struct fimc_is_sysfs_actuator sysfs_actuator;
 
 static int sensor_ak7348_write_position(struct i2c_client *client, u32 val)
@@ -64,7 +61,7 @@ static int sensor_ak7348_write_position(struct i2c_client *client, u32 val)
 p_err:
 	return ret;
 }
-/*
+
 static int sensor_ak7348_valid_check(struct i2c_client * client)
 {
 	int i;
@@ -137,7 +134,7 @@ static int sensor_ak7348_init_position(struct i2c_client *client,
 
 p_err:
 	return ret;
-}*/
+}
 
 int sensor_ak7348_actuator_init(struct v4l2_subdev *subdev, u32 val)
 {
@@ -149,11 +146,6 @@ int sensor_ak7348_actuator_init(struct v4l2_subdev *subdev, u32 val)
 	struct timeval st, end;
 	do_gettimeofday(&st);
 #endif
-
-	long cal_addr;
-	u32 cal_data;
-
-	int first_position = DEF_AK7348_FIRST_POSITION;
 
 	BUG_ON(!subdev);
 
@@ -172,7 +164,6 @@ int sensor_ak7348_actuator_init(struct v4l2_subdev *subdev, u32 val)
 		goto p_err;
 	}
 
-	// CheckProductID
 	ret = fimc_is_sensor_addr8_read8(client, 0x03, &product_id);
 	if (ret < 0)
 		goto p_err;
@@ -184,29 +175,20 @@ int sensor_ak7348_actuator_init(struct v4l2_subdev *subdev, u32 val)
 	}
 #endif
 
-	/* EEPROM AF calData address */
-	if (gPtr_lib_support.binary_load_flg) {
-		/* get pan_focus */
-		cal_addr = gPtr_lib_support.minfo->kvaddr_rear_cal + EEPROM_OEM_BASE;
-		memcpy((void *)&cal_data, (void *)cal_addr, sizeof(cal_data));
+	/* ToDo: Cal init data from FROM */
 
-		if (cal_data > 0)
-			first_position = cal_data;
-	} else {
-		warn("SDK library is not loaded");
-	}
-
-	ret = sensor_ak7348_write_position(client, first_position);
+	ret = sensor_ak7348_init_position(client, actuator);
 	if (ret <0)
 		goto p_err;
-	actuator->position = first_position;
 
 	/* Go active mode */
 	ret = fimc_is_sensor_addr8_write8(client, 0x02, 0);
 	if (ret <0)
 		goto p_err;
 
-	mdelay(DEF_AK7348_FIRST_DELAY);
+	/* ToDo */
+	/* Wait Settling(>20ms) */
+	/* SysSleep(30/MS_PER_TICK, NULL); */
 
 #ifdef DEBUG_ACTUATOR_TIME
 	do_gettimeofday(&end);

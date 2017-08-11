@@ -807,7 +807,7 @@ void exynos_wakeup_cp_call(bool early_wakeup)
 static int exynos_cpuidle_hotcpu_callback(struct notifier_block *nfb,
                                        unsigned long action, void *hcpu)
 {
-	unsigned long cpu = (unsigned long)hcpu;
+	unsigned int cpu = (unsigned long)hcpu;
 	struct cpumask mask;
 	int ret = NOTIFY_OK;
 

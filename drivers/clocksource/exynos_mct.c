@@ -92,8 +92,9 @@ struct mct_clock_event_device {
 
 static void exynos4_mct_write(unsigned int value, unsigned long offset)
 {
-	unsigned long stat_addr, i;
+	unsigned long stat_addr;
 	u32 mask;
+	u32 i;
 
 	writel_relaxed(value, reg_base + offset);
 

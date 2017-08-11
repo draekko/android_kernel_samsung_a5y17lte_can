@@ -573,7 +573,7 @@ static int s2mpu05_pmic_dt_parse_pdata(struct sec_pmic_dev *iodev,
 {
 	struct device_node *pmic_np, *regulators_np, *reg_np;
 	struct sec_regulator_data *rdata;
-	unsigned long i;
+	unsigned int i;
 	int ret;
 	u32 val;
 

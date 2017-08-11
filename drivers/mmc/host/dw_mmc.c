@@ -551,11 +551,14 @@ static void dw_mci_update_clock(struct dw_mci_slot *slot)
 	struct dw_mci *host = slot->host;
 	unsigned long timeout;
 	int retry = 10;
-	u32 cmd_status = 0;
+	unsigned int int_mask = 0;
+	unsigned int cmd_status = 0;
 
 	atomic_inc_return(&slot->host->ciu_en_win);
 	dw_mci_ciu_clk_en(slot->host, false);
 	atomic_dec_return(&slot->host->ciu_en_win);
+
+	dw_mci_disable_interrupt(host, &int_mask);
 
 	do {
 		wmb();
@@ -565,7 +568,7 @@ static void dw_mci_update_clock(struct dw_mci_slot *slot)
 		while (time_before(jiffies, timeout)) {
 			cmd_status = mci_readl(host, CMD) & SDMMC_CMD_START;
 			if (!cmd_status)
-				return;
+				goto out;
 
 			if (mci_readl(host, RINTSTS) & SDMMC_INT_HLE) {
 				mci_writel(host, RINTSTS, SDMMC_INT_HLE);
@@ -579,6 +582,9 @@ static void dw_mci_update_clock(struct dw_mci_slot *slot)
 
 	dev_err(&slot->mmc->class_dev,
 			"Timeout updating command (status %#x)\n", cmd_status);
+out:
+	/* recover interrupt mask after updating clock */
+	dw_mci_enable_interrupt(host, int_mask);
 }
 
 static inline bool dw_mci_stop_abort_cmd(struct mmc_command *cmd)

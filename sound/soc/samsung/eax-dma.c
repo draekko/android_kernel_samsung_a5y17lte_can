@@ -352,7 +352,7 @@ static void eax_adma_buffdone(void *data)
 	dma_addr_t src, dst, pos;
 	int buf_idx;
 
-	if (!di.running || !di.params->ch || !di.params_init)
+	if (!di.running || !di.params->ch)
 		return;
 
 	di.params->ops->getposition(di.params->ch, &src, &dst);

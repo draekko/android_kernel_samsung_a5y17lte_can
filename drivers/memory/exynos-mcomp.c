@@ -348,8 +348,7 @@ static int memory_compressor_probe(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	struct resource *res;
 	int ret = 0;
-	int irq;
-	unsigned int i;
+	int irq, i;
 	u32 temp;
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
@@ -416,7 +415,7 @@ err_cout_alloc:
 
 static int memory_compressor_remove(struct platform_device *pdev)
 {
-	unsigned int i;
+	int i;
 
 	/* unmapping */
 	iounmap(mem_comp.base);

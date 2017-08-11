@@ -23,14 +23,7 @@
 
 #include "fimc-is-helper-i2c.h"
 
-#include "interface/fimc-is-interface-library.h"
-
 #define ACTUATOR_NAME		"AK7345"
-
-#define DEF_AK7345_FIRST_POSITION		120
-#define DEF_AK7345_FIRST_DELAY			30
-
-extern struct fimc_is_lib_support gPtr_lib_support;
 
 static int sensor_ak7345_write_position(struct i2c_client *client, u32 val)
 {
@@ -68,17 +61,13 @@ int sensor_ak7345_actuator_init(struct v4l2_subdev *subdev, u32 val)
 {
 	int ret = 0;
 	u8 product_id = 0;
+	u8 init_pos = 0;
 	struct fimc_is_actuator *actuator;
 	struct i2c_client *client = NULL;
 #ifdef DEBUG_ACTUATOR_TIME
 	struct timeval st, end;
 	do_gettimeofday(&st);
 #endif
-
-	long cal_addr;
-	u32 cal_data;
-
-	int first_position = DEF_AK7345_FIRST_POSITION;
 
 	BUG_ON(!subdev);
 
@@ -108,31 +97,24 @@ int sensor_ak7345_actuator_init(struct v4l2_subdev *subdev, u32 val)
 	}
 #endif
 
-	/* EEPROM AF calData address */
-	if (gPtr_lib_support.binary_load_flg) {
-		/* get pan_focus */
-		cal_addr = gPtr_lib_support.minfo->kvaddr_rear_cal + EEPROM_OEM_BASE;
-		memcpy((void *)&cal_data, (void *)cal_addr, sizeof(cal_data));
+        /* ToDo: Cal init data from FROM */
+	init_pos = 120;
 
-		if (cal_data > 0)
-			first_position = cal_data;
-	} else {
-		warn("SDK library is not loaded");
-	}
-
-	ret = sensor_ak7345_write_position(client, first_position);
+	ret = sensor_ak7345_write_position(client, init_pos);
 	if (ret <0)
 		goto p_err;
-	actuator->position = first_position;
+	actuator->position = init_pos;
 
 	/* Go active mode */
 	ret = fimc_is_sensor_addr8_write8(client, 0x02, 0);
 	if (ret <0)
 		goto p_err;
 
-	dbg_sensor("initial position: %d\n", first_position);
+	dbg_sensor("initial position: %d\n", init_pos);
 
-	mdelay(DEF_AK7345_FIRST_DELAY);
+	/* ToDo */
+	/* Wait Settling(>20ms) */
+	/* SysSleep(30/MS_PER_TICK, NULL); */
 
 #ifdef DEBUG_ACTUATOR_TIME
 	do_gettimeofday(&end);

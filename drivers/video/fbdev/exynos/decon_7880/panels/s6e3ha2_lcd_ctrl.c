@@ -1045,10 +1045,9 @@ static int s6e3ha2_read_init_info(struct lcd_info *lcd, unsigned char *mtp)
 	int ret = 0;
 	unsigned char elvss_data[LDI_LEN_ELVSS] = {0,};
 
-	ret |= s6e3ha2_read_id(lcd);
-
 	DSI_WRITE(SEQ_TEST_KEY_ON_F0, ARRAY_SIZE(SEQ_TEST_KEY_ON_F0));
 
+	ret |= s6e3ha2_read_id(lcd);
 	ret |= s6e3ha2_read_mtp(lcd, mtp);
 	ret |= s6e3ha2_read_coordinate(lcd);
 	ret |= s6e3ha2_read_chip_id(lcd);

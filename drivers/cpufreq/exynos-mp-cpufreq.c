@@ -1368,7 +1368,7 @@ static bool suspend_prepared = false;
 static int __cpuinit exynos_cpufreq_cpu_up_notifier(struct notifier_block *notifier,
 					unsigned long action, void *hcpu)
 {
-	unsigned long cpu = (unsigned long) hcpu;
+	unsigned int cpu = (unsigned long)hcpu;
 	struct device *dev;
 	struct cpumask mask;
 	int cluster;
@@ -1393,7 +1393,7 @@ static int __cpuinit exynos_cpufreq_cpu_up_notifier(struct notifier_block *notif
 static int __cpuinit exynos_cpufreq_cpu_down_notifier(struct notifier_block *notifier,
 					unsigned long action, void *hcpu)
 {
-	unsigned long cpu = (unsigned long) hcpu;
+	unsigned int cpu = (unsigned long)hcpu;
 	struct device *dev;
 	struct cpumask mask;
 	int cluster;

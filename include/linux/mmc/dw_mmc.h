@@ -149,11 +149,11 @@ struct dw_mci {
 	void			*sg_cpu;
 	const struct dw_mci_dma_ops	*dma_ops;
 #ifdef CONFIG_MMC_DW_IDMAC
-	unsigned short		ring_size;
+	unsigned int		ring_size;
 #else
 	struct dw_mci_dma_data	*dma_data;
 #endif
-	unsigned short          desc_sz;
+	unsigned int            desc_sz;
 	struct pm_qos_request	pm_qos_int;
 	u32			cmd_status;
 	u32			data_status;
