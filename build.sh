@@ -16,7 +16,7 @@
 #
 ###################### CONFIG ######################
 
-# root directory of universal7870 kernel git repo (default is this script's location)
+# root directory of universal7880 kernel git repo (default is this script's location)
 RDIR=$(pwd)
 
 [ "$VER" ] ||
@@ -38,7 +38,7 @@ ABORT()
 }
 
 export ARCH=arm64
-export CROSS_COMPILE=$TOOLCHAIN/bin/aarch64-linux-gnu-
+export CROSS_COMPILE=$TOOLCHAIN/bin/aarch64-linux-android-
 
 [ -x "${CROSS_COMPILE}gcc" ] ||
 ABORT "Unable to find gcc cross-compiler at location: ${CROSS_COMPILE}gcc"

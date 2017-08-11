@@ -12,7 +12,7 @@ PAGE_SIZE=2048
 DTB_PADDING=0
 
 export ARCH=arm64
-export CROSS_COMPILE=$TOOLCHAIN/bin/aarch64-linux-gnu-
+export CROSS_COMPILE=$TOOLCHAIN/bin/aarch64-linux-android-
 
 BDIR=$RDIR/build
 OUTDIR=$BDIR/arch/$ARCH/boot
@@ -40,18 +40,16 @@ case $DEVICE in
 a5y17lte)
 	case $VARIANT in
 	xx|can)
-		DTSFILES="exynos7880-j7xelte_can_open_00 exynos7880-j7xelte_can_open_01
-			exynos7880-j7xelte_can_open_02 exynos7880-j7xelte_can_open_03
-			exynos7880-j7xelte_can_open_05 exynos7880-j7xelte_can_open_08
-			exynos7880-j7xelte_can_open_08"
-	xx|eur)
-		DTSFILES="exynos7880-j7xelte_eur_open_00 exynos7880-j7xelte_eur_open_01
-			exynos7880-j7xelte_eur_open_02 exynos7880-j7xelte_eur_open_03
-			exynos7880-j7xelte_eur_open_05 exynos7880-j7xelte_eur_open_08
-			exynos7880-j7xelte_eur_open_08"
+		DTSFILES="exynos7880-a5y17lte_can_open_00 exynos7880-a5y17lte_can_open_01
+			exynos7880-a5y17lte_can_open_02 exynos7880-a5y17lte_can_open_03
+			exynos7880-a5y17lte_can_open_05 exynos7880-a5y17lte_can_open_07
+			exynos7880-a5y17lte_can_open_08"
 		;;
-	kor|ktt|lgt|skt)
-		DTSFILES="exynos7880-j7xelte_kor_03 exynos7880-j7xelte_kor_04"
+	eur)
+		DTSFILES="exynos7880-a5y17lte_eur_open_00 exynos7880-a5y17lte_eur_open_01
+			exynos7880-a5y17lte_eur_open_02 exynos7880-a5y17lte_eur_open_03
+			exynos7880-a5y17lte_eur_open_05 exynos7880-a5y17lte_eur_open_07
+			exynos7880-a5y17lte_eur_open_08"
 		;;
 	*) ABORT "Unknown variant of $DEVICE: $VARIANT" ;;
 	esac
@@ -77,6 +75,7 @@ for dts in $DTSFILES; do
 done
 
 echo "Generating dtb.img..."
-"$RDIR/scripts/dtbTool/dtbTool" -o "$OUTDIR/dtb.img" -d "$DTBDIR/" -s $PAGE_SIZE --platform $DTBH_PLATFORM_CODE --subtype $DTBH_SUBTYPE_CODE || exit 1
+#"$RDIR/scripts/dtbTool/dtbTool" -o "$OUTDIR/dtb.img" -d "$DTBDIR/" -s $PAGE_SIZE --platform $DTBH_PLATFORM_CODE --subtype $DTBH_SUBTYPE_CODE || exit 1
+"$RDIR/scripts/dtbTool/dtbTool" -o "$OUTDIR/dtb.img" -d "$DTBDIR/" -s $PAGE_SIZE || exit 1
 
 echo "Done."

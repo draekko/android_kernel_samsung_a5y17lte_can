@@ -8,7 +8,7 @@ RDIR=$(pwd)
 TOOLCHAIN=$ANDROID_BUILD_HOME/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9
 
 export ARCH=arm64
-export CROSS_COMPILE=$TOOLCHAIN/bin/aarch64-linux-gnu-
+export CROSS_COMPILE=$TOOLCHAIN/bin/aarch64-linux-android-
 
 ABORT()
 {
